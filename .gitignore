@@ -1,0 +1,47 @@
+# =========================
+# Keys and Secrets (CRITICAL)
+# =========================
+serviceAccountKey.json
+firebase-*.json
+*.pem
+*.key
+credentials.json
+secret.json
+
+# =========================
+# Environments
+# =========================
+.env
+.env.*
+*.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =========================
+# Backend (Python/FastAPI)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.log
+error_log.txt
+
+# =========================
+# Frontend (React/Vite)
+# =========================
+node_modules/
+dist/
+dist-ssr/
+build/
+.eslintcache
+
+# =========================
+# OS / Misc
+# =========================
+.DS_Store
+Thumbs.db

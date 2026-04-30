@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+firebase-admin
+PyMuPDF
+python-docx
+pandas
+openpyxl
+google-generativeai
+python-dotenv
+redis
+websockets
