@@ -135,36 +135,57 @@ async def websocket_chat(websocket: WebSocket, doc_id: str, token: str):
 
     try:
         while True:
-            # Wait for user message
-            data = await websocket.receive_text()
-            payload = json.loads(data)
-            user_query = payload.get("query")
+            try:
+                # Wait for user message
+                data = await websocket.receive_text()
+                payload = json.loads(data)
+                user_query = payload.get("query")
 
-            # Fetch history BEFORE saving the current turn to avoid duplicate user turns in Gemini history
-            history = get_chat_history(user_id, doc_id)
+                # Fetch history BEFORE saving the current turn to avoid duplicate user turns in Gemini history
+                history = get_chat_history(user_id, doc_id)
 
-            # Save user turn to Firestore
-            save_chat_turn(user_id, doc_id, "user", user_query)
-            
-            # Fetch tree, and route
-            tree_index_data = get_document_tree(doc_id)
-            target_nodes = await route_query(user_query, tree_index_data[0])
-            gathered_context = get_specific_nodes(doc_id, target_nodes)
+                # Save user turn to Firestore
+                save_chat_turn(user_id, doc_id, "user", user_query)
+                
+                # Fetch tree, and route
+                tree_index_data = get_document_tree(doc_id)
+                target_nodes = await route_query(user_query, tree_index_data[0])
+                gathered_context = get_specific_nodes(doc_id, target_nodes)
 
-            # Send a "start" signal so UI knows streaming is beginning
-            await websocket.send_json({"type": "start", "sources": target_nodes})
+                # Send a "start" signal so UI knows streaming is beginning
+                await websocket.send_json({"type": "start", "sources": target_nodes})
 
-            full_answer = ""
-            # Stream the answer chunks
-            async for chunk in synthesize_answer_stream(user_query, gathered_context, history):
-                full_answer += chunk
-                await websocket.send_json({"type": "chunk", "text": chunk})
-            
-            # Save AI turn to Firestore
-            save_chat_turn(user_id, doc_id, "ai", full_answer)
-            
-            # Send end signal
-            await websocket.send_json({"type": "end"})
+                full_answer = ""
+                # Stream the answer chunks
+                async for chunk in synthesize_answer_stream(user_query, gathered_context, history):
+                    full_answer += chunk
+                    await websocket.send_json({"type": "chunk", "text": chunk})
+                
+                # Save AI turn to Firestore
+                save_chat_turn(user_id, doc_id, "ai", full_answer)
+                
+                # Send end signal
+                await websocket.send_json({"type": "end"})
+            except Exception as inner_e:
+                import traceback
+                with open("ws_error_log.txt", "w") as f:
+                    f.write("ERROR IN WEBSOCKET LOOP:\n")
+                    f.write(traceback.format_exc())
+                
+                # Ensure the UI transitions from 'waiting' to 'streaming' so it can display the error
+                await websocket.send_json({"type": "start", "sources": []})
+                
+                # Determine user-friendly error message
+                error_msg = f"An error occurred: {str(inner_e)}"
+                if "429" in str(inner_e) or "ResourceExhausted" in str(inner_e) or "Quota" in str(inner_e):
+                    error_msg = "⚠️ The Gemini API rate limit has been exceeded (Free Tier allows 5 requests). Please wait a few moments and try again."
+                
+                # Send the error text as a chunk so the user sees it
+                await websocket.send_json({"type": "chunk", "text": error_msg})
+                
+                # End the stream
+                await websocket.send_json({"type": "end"})
+                break
 
     except WebSocketDisconnect:
         print("Client disconnected")

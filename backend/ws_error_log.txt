@@ -1,0 +1,11 @@
+ERROR IN WEBSOCKET LOOP:
+Traceback (most recent call last):
+  File "D:\vectorless-rag\backend\app\main.py", line 140, in websocket_chat
+    data = await websocket.receive_text()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHINMAYA\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\websockets.py", line 120, in receive_text
+    self._raise_on_disconnect(message)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\CHINMAYA\AppData\Local\Programs\Python\Python313\Lib\site-packages\starlette\websockets.py", line 114, in _raise_on_disconnect
+    raise WebSocketDisconnect(message["code"], message.get("reason"))
+starlette.websockets.WebSocketDisconnect: (<CloseCode.ABNORMAL_CLOSURE: 1006>, '')

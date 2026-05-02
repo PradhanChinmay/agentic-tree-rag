@@ -8,9 +8,9 @@ load_dotenv()
 # Configure the SDK
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# We'll use Gemini 2.5 Flash for speed, or 2.5 Pro for complex reasoning
+# We'll use Gemini Flash Latest to avoid strict 20 req/day rate limits on 2.5 flash
 # Flash is usually perfect for structuring and extracting data fast.
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-flash-latest')
 
 async def generate_json_tree(parsed_data: dict) -> str:
     """
@@ -147,8 +147,16 @@ async def synthesize_answer_stream(query: str, context: str, chat_history: list)
         stream=True
     )
     
-    async for chunk in response:
-        yield chunk.text
+    try:
+        async for chunk in response:
+            yield chunk.text
+    except StopAsyncIteration:
+        # Gemini sometimes leaks StopAsyncIteration if the response is completely empty
+        pass
+    except ValueError as e:
+        # Sometimes if the response is blocked or empty, chunk.text raises ValueError
+        print(f"Gemini yielded an empty or blocked chunk: {e}")
+        yield "I'm sorry, I couldn't generate a response for that. It might have been blocked or empty."
 
 async def repair_json(bad_json_string: str) -> dict:
     """Edge Case Handler: Asks Gemini to fix malformed JSON."""
